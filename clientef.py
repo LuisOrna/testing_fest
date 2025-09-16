@@ -49,38 +49,52 @@ def recibir_mensajes(cliente_local):
        else:
            servidor_activo = False
 
+def enviar_mensaje(cliente_socket, mensaje):
+    """Envía un mensaje a través del socket cliente"""
+    try:
+        cliente_socket.send(mensaje.encode())
+        return True
+    except:
+        return False
+
 #------------MAIN-----------------------------------------------------------------
+if __name__ == '__main__':
+    
+    #Cliente
+    cliente = socket.socket()
+    nombre = input("Ingrese su nombre: ")
 
-#Cliente
-cliente = socket.socket()
-nombre = input("Ingrese su nombre: ")
+    #Hago que se conecte
+    cliente.connect(('localhost', 9999))
+    cliente.send(nombre.encode())
 
-#Hago que se conecte
-cliente.connect(('localhost', 9999))
-cliente.send(nombre.encode())
+    print('\nconectado al servidor\n')
 
-print('\nconectado al servidor\n')
+    #Thread para recibir mensajes
+    thread_recibir = threading.Thread(target=recibir_mensajes, args=(cliente,))
+    thread_recibir.start()
 
-#Thread para recibir mensajes
-thread_recibir = threading.Thread(target=recibir_mensajes, args=(cliente,))
-thread_recibir.start()
+    #Enviar mensaje
+    print("Conectado al chat. Escribe 'salir' para terminar.\n")
+    while servidor_activo:
+        mensaje = input("tu: ")
+        if mensaje == 'salir':
+            print("Estás saliendo del chat")
+            servidor_activo = False
+            break
 
-#Enviar mensaje
-print("Conectado al chat. Escribe 'salir' para terminar.\n")
-while servidor_activo:
-   mensaje = input("tu: ")
-   if mensaje == 'salir':
-       print("Estás saliendo del chat")
-       servidor_activo = False
-       break
-   
-   try: 
-       cliente.send(mensaje.encode())
-   except:
-       print("Error enviando mensaje...")
-       # No cambiar servidor_activo aquí, dejar que el hilo de recepción maneje
+        if not enviar_mensaje(cliente, mensaje):
+            print("Error enviando mensaje...")
 
-#Cerrar
-cliente.close()
-thread_recibir.join(timeout=1)
-print("chat cerrado")
+    '''
+    try: 
+        cliente.send(mensaje.encode())
+    except:
+        print("Error enviando mensaje...")
+        # No cambiar servidor_activo aquí, dejar que el hilo de recepción maneje
+        '''
+
+    #Cerrar
+    cliente.close()
+    thread_recibir.join(timeout=1)
+    print("chat cerrado")

@@ -100,19 +100,18 @@ def atender_cliente(conexion):
     limpiar_cliente(conexion)
 
 
-
-
 #-------------------MAIN-------------------------------------------------------------------------------------------------
-servidor = socket.socket()
-servidor.bind(('localhost', 9999))
-servidor.listen(4)
-print("esperando conexion...")
+if __name__ == "__main__":
+    servidor = socket.socket()
+    servidor.bind(('localhost', 9999))
+    servidor.listen(4)
+    print("esperando conexion...")
 
-#Flujo
-while True:
-    conexion,_ = servidor.accept()
+    #Flujo
+    while True:
+        conexion,_ = servidor.accept()
 
-    #Se crea al thread
-    thread = threading.Thread(target=atender_cliente, args=(conexion,))
-    thread.start()
+        #Se crea al thread
+        thread = threading.Thread(target=atender_cliente, args=(conexion,))
+        thread.start()
 
