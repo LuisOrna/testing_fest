@@ -1,10 +1,7 @@
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-import threading
-import time
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 from servidor import clientes, nombres, broadcast, registrar_cliente, limpiar_cliente
 
 #Creo inicialmente un test para ver la atencion con dos clientes en simultaneo
@@ -123,4 +120,103 @@ def test_servidor_continua_despues_desconexion_inesperada():
     nombres[cliente_2] = "user2"
     nombres[cliente_3] = "user3"
 
+    # Cliente2 se desconecta
+    limpiar_cliente(cliente_2)
     
+    # Verificar que cliente2 ya no está
+    assert cliente_2 not in clientes
+    assert cliente_2 not in nombres
+    
+    # Verificar que el servidor sigue funcionando con los otros
+    mensaje = b"Mensaje despues de desconexion"
+    broadcast(mensaje, cliente_1)
+    
+    # Solo cliente3 debe recibir el mensaje
+    cliente_1.send.assert_not_called()  # origen, no debe recibir
+    cliente_3.send.assert_called_once_with(mensaje)  # debe recibir
+
+
+def test_desconexion_repentina_durante_broadcast():
+    clientes.clear()
+    nombres.clear()
+    
+    # Crear 2 clientes
+    cliente1 = Mock()
+    cliente2 = Mock()
+    
+    # cliente1 normal, cliente2 va a fallar
+    cliente2.send.side_effect = ConnectionResetError("Conexión perdida")
+    
+    clientes.append(cliente1)
+    clientes.append(cliente2)
+    nombres[cliente1] = "User1"
+    nombres[cliente2] = "User2"
+    
+    # Enviar mensaje
+    mensaje = b"Test mensaje"
+    broadcast(mensaje)
+    
+    # verifo que se recibio mensaje normal.
+    cliente1.send.assert_called_once_with(mensaje)
+    
+#Otra prueba para ver desconexion repentina
+def test_desconexion_repentina_durante_broadcast():
+    clientes.clear()
+    nombres.clear()
+    
+    # Crear 2 clientes
+    cliente1 = Mock()
+    cliente2 = Mock()
+    
+    # Cliente2 falla cuando le envían mensaje
+    cliente2.send.side_effect = BrokenPipeError("Conexión rota")
+    
+    # Agregar a las listas
+    clientes.append(cliente1)
+    clientes.append(cliente2)
+    nombres[cliente1] = "User1" 
+    nombres[cliente2] = "User2"
+    
+    # Primer broadcast - cliente2 va a fallar
+    mensaje1 = b"Primer mensaje"
+    broadcast(mensaje1)
+    
+    # LA PREGUNTA CLAVE: ¿Cliente2 sigue en la lista?
+    print(f"\nClientes después del fallo: {len(clientes)}")
+    print(f"Cliente2 sigue en lista: {cliente2 in clientes}")
+    
+    # Segundo broadcast - ¿reintenta con cliente2?
+    mensaje2 = b"Segundo mensaje"
+    broadcast(mensaje2)
+    
+    # Verificaciones básicas
+    assert cliente1.send.call_count == 2  # Debe recibir ambos mensajes
+
+
+#Despues de reparado
+def test_desconexion_repentina_durante_broadcast():
+    clientes.clear()
+    nombres.clear()
+    
+    cliente1 = Mock()
+    cliente2 = Mock()
+    cliente2.send.side_effect = BrokenPipeError("Conexión rota")
+    
+    clientes.append(cliente1)
+    clientes.append(cliente2)
+    nombres[cliente1] = "User1" 
+    nombres[cliente2] = "User2"
+    
+    # Primer broadcast - cliente2 falla
+    broadcast(b"Primer mensaje")
+    
+    # Verificar que cliente2 fue limpiado
+    assert len(clientes) == 1
+    assert cliente2 not in clientes
+    assert cliente2 not in nombres
+    
+    # Segundo broadcast - solo cliente1 activo
+    broadcast(b"Segundo mensaje")
+    
+    # Cliente1 recibe ambos mensajes
+    assert cliente1.send.call_count == 2

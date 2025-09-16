@@ -26,7 +26,9 @@ def broadcast(mensaje, conexion_origen=None):
                 cliente.send(mensaje)
             except Exception as error:
                 print(f"no se pudo enviar mensaje al cliente {nombres[cliente]} eror{error} (100)")
-                pass
+                limpiar_cliente(conexion=cliente) #Modificado despues del fallo del test
+                
+                #pass
 
 
 def notificar_entrada(nombre):
@@ -101,6 +103,7 @@ def atender_cliente(conexion):
 
 
 #-------------------MAIN-------------------------------------------------------------------------------------------------
+'''
 if __name__ == "__main__":
     servidor = socket.socket()
     servidor.bind(('localhost', 9999))
@@ -114,4 +117,17 @@ if __name__ == "__main__":
         #Se crea al thread
         thread = threading.Thread(target=atender_cliente, args=(conexion,))
         thread.start()
+'''
+def iniciar_servidor():
+    servidor = socket.socket()
+    servidor.bind(('localhost', 9999))
+    servidor.listen(4)
+    print("esperando conexion...")
+    
+    while True:
+        conexion, _ = servidor.accept()
+        thread = threading.Thread(target=atender_cliente, args=(conexion,))
+        thread.start()
 
+if __name__ == "__main__":
+    iniciar_servidor()
